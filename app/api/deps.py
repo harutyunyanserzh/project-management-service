@@ -6,8 +6,13 @@ from sqlalchemy.orm import Session
 
 from app.core.security import decode_access_token
 from app.db.session import get_db
+from app.models.base import ProjectRole
+from app.models.project import Project, ProjectAccess
 from app.models.user import User
 
+# HTTPBearer renders as a plain "paste your token" field in Swagger UI's
+# Authorize dialog -- appropriate here since POST /login takes JSON, not
+# OAuth2 form-encoded credentials.
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
@@ -15,6 +20,12 @@ def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     db: Session = Depends(get_db),
 ) -> User:
+    """Resolve the JWT bearer token into a User, or raise 401.
+
+    Every business-logic route depends on this (directly or via a further
+    permission-checking dependency) so that all requests are authorized via
+    the JWT issued by POST /login, per the project spec.
+    """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -42,3 +53,46 @@ def get_current_user(
         raise credentials_exception
 
     return user
+
+
+def get_project_or_404(project_id: uuid.UUID, db: Session = Depends(get_db)) -> Project:
+    project = db.get(Project, project_id)
+    if project is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+    return project
+
+
+def get_project_access_or_403(
+    project: Project = Depends(get_project_or_404),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ProjectAccess:
+    """Resolve the current user's ProjectAccess row for this project.
+
+    Raises 403 if the user has no access at all. Use this directly when a
+    route just needs "any access" (owner or participant); use
+    require_owner below when a route needs owner-only access.
+    """
+    access = (
+        db.query(ProjectAccess)
+        .filter(ProjectAccess.project_id == project.id, ProjectAccess.user_id == current_user.id)
+        .first()
+    )
+    if access is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this project",
+        )
+    return access
+
+
+def require_owner(
+    access: ProjectAccess = Depends(get_project_access_or_403),
+) -> ProjectAccess:
+    """Use for routes that only the project owner may perform (delete, invite)."""
+    if access.role != ProjectRole.OWNER:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the project owner can perform this action",
+        )
+    return access

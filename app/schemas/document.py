@@ -5,11 +5,12 @@ from pydantic import BaseModel, ConfigDict
 
 
 class DocumentRead(BaseModel):
-    """Document metadata returned as part of a project's full info."""
+    """Document metadata returned to the client. Never exposes the raw S3 key."""
 
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
+    project_id: uuid.UUID
     file_name: str
     content_type: str
     size_bytes: int

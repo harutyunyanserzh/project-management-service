@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     # AWS / S3
     AWS_ACCESS_KEY_ID: str | None = None
     AWS_SECRET_ACCESS_KEY: str | None = None
+    AWS_SESSION_TOKEN: str | None = None  # required by AWS sandbox/temporary credentials
     AWS_REGION: str = "us-east-1"
     S3_BUCKET_NAME: str = "project-management-documents"
     S3_ENDPOINT_URL: str | None = None  # useful for LocalStack / MinIO in dev

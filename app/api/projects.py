@@ -9,6 +9,7 @@ from app.models.base import ProjectRole
 from app.models.project import Project, ProjectAccess
 from app.models.user import User
 from app.schemas.project import ProjectCreate, ProjectRead, ProjectUpdate
+from app.services import storage
 
 router = APIRouter(tags=["projects"])
 
@@ -93,7 +94,11 @@ def delete_project(
     access: ProjectAccess = Depends(require_owner),
     db: Session = Depends(get_db),
 ) -> None:
-    """Delete a project. Owner-only. Cascades to delete its documents and access rows."""
+    """Delete a project. Owner-only. Cascades to delete its documents (DB rows
+    and their underlying S3 objects) and access rows."""
+    for document in access.project.documents:
+        storage.delete_file(document.s3_key)
+
     db.delete(access.project)
     db.commit()
 

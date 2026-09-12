@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.security import decode_access_token
 from app.db.session import get_db
 from app.models.base import ProjectRole
+from app.models.document import Document
 from app.models.project import Project, ProjectAccess
 from app.models.user import User
 
@@ -96,3 +97,34 @@ def require_owner(
             detail="Only the project owner can perform this action",
         )
     return access
+
+
+def get_document_or_404(document_id: uuid.UUID, db: Session = Depends(get_db)) -> Document:
+    document = db.get(Document, document_id)
+    if document is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+    return document
+
+
+def get_document_access_or_403(
+    document: Document = Depends(get_document_or_404),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Document:
+    """A user may act on a document iff they have access to its parent project.
+    Returns the document (not the access row) since document routes need the
+    document itself, not the requester's role."""
+    access = (
+        db.query(ProjectAccess)
+        .filter(
+            ProjectAccess.project_id == document.project_id,
+            ProjectAccess.user_id == current_user.id,
+        )
+        .first()
+    )
+    if access is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this document's project",
+        )
+    return document

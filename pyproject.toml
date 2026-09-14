@@ -50,6 +50,7 @@ extend-immutable-calls = ["fastapi.Depends", "fastapi.File", "fastapi.Query", "f
 [tool.black]
 line-length = 100
 target-version = ["py310"]
+extend-exclude = "migrations/versions/"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

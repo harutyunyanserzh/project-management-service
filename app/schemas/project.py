@@ -52,6 +52,6 @@ class ProjectRead(BaseModel):
 
 # Imported here (not at module top) to avoid a circular import between the
 # project and document schema modules; DocumentRead only needs primitives.
-from app.schemas.document import DocumentRead  # noqa: E402
+from app.schemas.document import DocumentRead
 
 ProjectRead.model_rebuild()

@@ -33,7 +33,7 @@ logger.setLevel(logging.INFO)
 
 s3 = boto3.client("s3")
 
-MAX_PROJECT_STORAGE_BYTES = int(os.environ.get("MAX_PROJECT_STORAGE_BYTES", 100 * 1024 * 1024))
+MAX_PROJECT_STORAGE_BYTES = int(os.environ.get("MAX_PROJECT_STORAGE_BYTES", str(100 * 1024 * 1024)))
 
 KEY_PATTERN = re.compile(r"^projects/(?P<project_id>[^/]+)/documents/")
 

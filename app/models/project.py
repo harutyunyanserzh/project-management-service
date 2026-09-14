@@ -53,4 +53,6 @@ class ProjectAccess(Base, UUIDPKMixin, TimestampMixin):
     user: Mapped["User"] = relationship(back_populates="project_accesses")
 
     def __repr__(self) -> str:
-        return f"<ProjectAccess project_id={self.project_id} user_id={self.user_id} role={self.role}>"
+        return (
+            f"<ProjectAccess project_id={self.project_id} user_id={self.user_id} role={self.role}>"
+        )

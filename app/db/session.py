@@ -13,8 +13,6 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, futu
 class Base(DeclarativeBase):
     """Base class for all ORM models."""
 
-    pass
-
 
 def get_db() -> Generator[Session, None, None]:
     """FastAPI dependency that yields a DB session and guarantees it is closed."""

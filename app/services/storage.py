@@ -14,7 +14,7 @@ def _client():
     return boto3.client(
         "s3",
         region_name=settings.AWS_REGION,
-        endpoint_url=settings.S3_ENDPOINT_URL,
+        endpoint_url=settings.S3_ENDPOINT_URL or None,
         aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
         aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
         aws_session_token=settings.AWS_SESSION_TOKEN,

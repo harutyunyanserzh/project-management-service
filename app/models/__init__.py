@@ -5,10 +5,10 @@ from app.models.share_token import ShareToken
 from app.models.user import User
 
 __all__ = [
-    "User",
+    "Document",
     "Project",
     "ProjectAccess",
     "ProjectRole",
-    "Document",
     "ShareToken",
+    "User",
 ]

@@ -20,7 +20,10 @@ logger.setLevel(logging.INFO)
 
 s3 = boto3.client("s3")
 
-THUMBNAIL_SIZE = (int(os.environ.get("THUMBNAIL_WIDTH", 256)), int(os.environ.get("THUMBNAIL_HEIGHT", 256)))
+THUMBNAIL_SIZE = (
+    int(os.environ.get("THUMBNAIL_WIDTH", "256")),
+    int(os.environ.get("THUMBNAIL_HEIGHT", "256")),
+)
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg"}
 
 

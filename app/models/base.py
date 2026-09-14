@@ -24,9 +24,7 @@ class TimestampMixin:
 class UUIDPKMixin:
     """Adds a UUID primary key, generated server-side by Python (uuid4)."""
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
 
 class ProjectRole(str, enum.Enum):

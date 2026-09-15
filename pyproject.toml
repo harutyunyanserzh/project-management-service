@@ -42,12 +42,16 @@ target-version = "py310"
 [tool.ruff.lint.flake8-bugbear]
 extend-immutable-calls = ["fastapi.Depends", "fastapi.File", "fastapi.Query", "fastapi.Body"]
 
-[tool.ruff.lint.per-file-ignores]
-"app/models/*.py" = ["F821"]  # SQLAlchemy string forward-refs to sibling-module classes
+
+[tool.ruff.lint.per-file-ignores] 
+"app/models/*.py" = ["F821"] # SQLAlchemy string forward-refs to sibling-module classes 
+"app/schemas/project.py" = ["E402"] # deliberate late import to avoid a circular import 
+"migrations/env.py" = ["F401", "F403"] # wildcard import needed to register all models on Base.metadata
 
 [tool.black]
 line-length = 100
 target-version = ["py310"]
+extend-exclude = "migrations/versions/"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

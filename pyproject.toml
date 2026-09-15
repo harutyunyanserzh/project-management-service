@@ -44,13 +44,10 @@ extend-immutable-calls = ["fastapi.Depends", "fastapi.File", "fastapi.Query", "f
 
 [tool.ruff.lint.per-file-ignores]
 "app/models/*.py" = ["F821"]  # SQLAlchemy string forward-refs to sibling-module classes
-"app/schemas/project.py" = ["E402"]
-"migrations/env.py" = ["F401", "F403"]
 
 [tool.black]
 line-length = 100
 target-version = ["py310"]
-extend-exclude = "migrations/versions/"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

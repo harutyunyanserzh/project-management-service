@@ -108,7 +108,9 @@ def invite_user_to_project(
     """Grant PARTICIPANT access to another user by login. Owner-only."""
     invite_login = user.strip()
     if not invite_login:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User login is required")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="User login is required"
+        )
 
     invitee = db.query(User).filter(User.login == invite_login).first()
     if invitee is None:

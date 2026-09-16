@@ -1,5 +1,6 @@
 import io
 
+from app.core.config import settings
 from tests.conftest import auth_headers, register_and_login
 
 
@@ -37,6 +38,46 @@ def test_upload_rejects_disallowed_file_type(client):
         headers=auth_headers(token),
     )
     assert response.status_code == 400
+
+
+def test_upload_rejects_project_storage_over_limit(client, monkeypatch):
+    token = register_and_login(client, "alice")
+    project = _create_project(client, token)
+    monkeypatch.setattr(settings, "MAX_PROJECT_STORAGE_BYTES", 5)
+
+    response = client.post(
+        f"/project/{project['id']}/documents",
+        files={"files": ("report.pdf", io.BytesIO(b"123456"), "application/pdf")},
+        headers=auth_headers(token),
+    )
+
+    assert response.status_code == 413
+    assert response.json()["detail"] == "Project storage limit exceeded"
+    documents = client.get(
+        f"/project/{project['id']}/documents", headers=auth_headers(token)
+    ).json()
+    assert documents == []
+
+
+def test_batch_upload_checks_combined_size(client, monkeypatch):
+    token = register_and_login(client, "alice")
+    project = _create_project(client, token)
+    monkeypatch.setattr(settings, "MAX_PROJECT_STORAGE_BYTES", 8)
+
+    response = client.post(
+        f"/project/{project['id']}/documents",
+        files=[
+            ("files", ("one.pdf", io.BytesIO(b"12345"), "application/pdf")),
+            ("files", ("two.pdf", io.BytesIO(b"67890"), "application/pdf")),
+        ],
+        headers=auth_headers(token),
+    )
+
+    assert response.status_code == 413
+    documents = client.get(
+        f"/project/{project['id']}/documents", headers=auth_headers(token)
+    ).json()
+    assert documents == []
 
 
 def test_upload_blocked_without_project_access(client):
@@ -124,6 +165,54 @@ def test_participant_can_update_document(client):
 
     download = client.get(f"/document/{document_id}", headers=auth_headers(alice_token))
     assert download.content == new_content
+
+
+def test_update_accounts_for_replaced_file_size(client, monkeypatch):
+    token = register_and_login(client, "alice")
+    project = _create_project(client, token)
+    monkeypatch.setattr(settings, "MAX_PROJECT_STORAGE_BYTES", 10)
+
+    upload = client.post(
+        f"/project/{project['id']}/documents",
+        files={"files": ("old.pdf", io.BytesIO(b"12345678"), "application/pdf")},
+        headers=auth_headers(token),
+    )
+    assert upload.status_code == 201
+    document_id = upload.json()[0]["id"]
+
+    response = client.put(
+        f"/document/{document_id}",
+        files={"file": ("new.pdf", io.BytesIO(b"abcdefghi"), "application/pdf")},
+        headers=auth_headers(token),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["file_name"] == "new.pdf"
+    assert response.json()["size_bytes"] == 9
+
+
+def test_update_rejects_storage_over_limit(client, monkeypatch):
+    token = register_and_login(client, "alice")
+    project = _create_project(client, token)
+    monkeypatch.setattr(settings, "MAX_PROJECT_STORAGE_BYTES", 10)
+
+    upload = client.post(
+        f"/project/{project['id']}/documents",
+        files={"files": ("old.pdf", io.BytesIO(b"12345"), "application/pdf")},
+        headers=auth_headers(token),
+    )
+    document_id = upload.json()[0]["id"]
+
+    response = client.put(
+        f"/document/{document_id}",
+        files={"file": ("large.pdf", io.BytesIO(b"12345678901"), "application/pdf")},
+        headers=auth_headers(token),
+    )
+
+    assert response.status_code == 413
+    original = client.get(f"/document/{document_id}", headers=auth_headers(token))
+    assert original.status_code == 200
+    assert original.content == b"12345"
 
 
 def test_document_delete_removes_it(client):

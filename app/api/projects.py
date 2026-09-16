@@ -34,7 +34,7 @@ def create_project(
     """Create a project. The creator automatically becomes its OWNER."""
     project = Project(name=payload.name, description=payload.description, owner_id=current_user.id)
     db.add(project)
-    db.flush()  # populate project.id before creating the access row
+    db.flush()
 
     access = ProjectAccess(project_id=project.id, user_id=current_user.id, role=ProjectRole.OWNER)
     db.add(access)
@@ -49,8 +49,7 @@ def list_projects(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[ProjectRead]:
-    """List every project the current user has access to (owner or participant),
-    with full details (info + documents)."""
+    """List every project the current user has access to with details and documents."""
     accesses = (
         db.query(ProjectAccess)
         .filter(ProjectAccess.user_id == current_user.id)
@@ -92,8 +91,7 @@ def delete_project(
     access: ProjectAccess = Depends(require_owner),
     db: Session = Depends(get_db),
 ) -> None:
-    """Delete a project. Owner-only. Cascades to delete its documents (DB rows
-    and their underlying S3 objects) and access rows."""
+    """Delete a project. Owner-only."""
     for document in access.project.documents:
         storage.delete_file(document.s3_key)
 
@@ -108,7 +106,11 @@ def invite_user_to_project(
     db: Session = Depends(get_db),
 ) -> ProjectRead:
     """Grant PARTICIPANT access to another user by login. Owner-only."""
-    invitee = db.query(User).filter(User.login == user).first()
+    invite_login = user.strip()
+    if not invite_login:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User login is required")
+
+    invitee = db.query(User).filter(User.login == invite_login).first()
     if invitee is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 

@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.base import ProjectRole
 
@@ -30,7 +30,10 @@ class ProjectUpdate(BaseModel):
     @field_validator("name")
     @classmethod
     def name_not_blank(cls, v: str | None) -> str | None:
-        if v is not None and not v.strip():
+        if v is None:
+            return None
+        v = v.strip()
+        if not v:
             raise ValueError("name must not be blank")
         return v
 
@@ -47,7 +50,7 @@ class ProjectRead(BaseModel):
     created_at: datetime
     updated_at: datetime
     my_role: ProjectRole  # the requesting user's role on this project
-    documents: list["DocumentRead"] = []
+    documents: list["DocumentRead"] = Field(default_factory=list)
 
 
 # Imported here (not at module top) to avoid a circular import between the

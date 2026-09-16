@@ -38,6 +38,11 @@ class UserLogin(BaseModel):
     login: str
     password: str
 
+    @field_validator("login")
+    @classmethod
+    def normalize_login(cls, v: str) -> str:
+        return v.strip()
+
 
 class UserRead(BaseModel):
     """Public-facing representation of a user (never includes the password hash)."""

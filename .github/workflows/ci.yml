@@ -1,4 +1,4 @@
-name: CI/CD
+name: CI
 
 on:
   push:
@@ -38,45 +38,13 @@ jobs:
       - name: Run tests
         run: poetry run pytest tests/ -v
 
-  build-and-push:
+  docker-build:
     runs-on: ubuntu-latest
     needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    permissions:
-      contents: read
-      packages: write
     steps:
       - uses: actions/checkout@v4
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}
-
-      - name: Build and push image
-        uses: docker/build-push-action@v5
+      - name: Verify Docker image builds
+        uses: docker/build-push-action@v6
         with:
           context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build-and-push
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    steps:
-      - name: Deploy
-        run: |
-          echo "Deployment step placeholder."
-          echo "Wire this up to your actual target (AWS ECS/App Runner, a VM via SSH, etc.)"
-          echo "once deployment infrastructure is decided. The image is already"
-          echo "published to ghcr.io/${{ github.repository }} by the previous job."
+          push: false

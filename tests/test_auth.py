@@ -14,6 +14,15 @@ def test_register_creates_user(client):
     assert "hashed_password" not in body
 
 
+def test_register_trims_login(client):
+    response = client.post(
+        "/auth",
+        json={"login": "  alice  ", "password": "password123", "repeat_password": "password123"},
+    )
+    assert response.status_code == 201
+    assert response.json()["login"] == "alice"
+
+
 def test_register_duplicate_login_conflicts(client):
     payload = {"login": "alice", "password": "password123", "repeat_password": "password123"}
     client.post("/auth", json=payload)
@@ -47,6 +56,15 @@ def test_login_success_returns_token(client):
     assert body["token_type"] == "bearer"
     assert body["expires_in_minutes"] == 60
     assert len(body["access_token"]) > 20
+
+
+def test_login_trims_login(client):
+    client.post(
+        "/auth",
+        json={"login": "alice", "password": "password123", "repeat_password": "password123"},
+    )
+    response = client.post("/login", json={"login": "  alice  ", "password": "password123"})
+    assert response.status_code == 200
 
 
 def test_login_wrong_password_rejected(client):

@@ -8,9 +8,11 @@ from app.core.config import settings
 
 
 def _client():
-    """Build a boto3 S3 client. S3_ENDPOINT_URL lets this point at a local
-    S3-compatible service (LocalStack/MinIO) during development; leave it
-    unset to talk to real AWS."""
+    """Build a boto3 S3 client.
+
+    S3_ENDPOINT_URL lets development and tests use an S3-compatible service
+    instead of real AWS S3.
+    """
     return boto3.client(
         "s3",
         region_name=settings.AWS_REGION,
@@ -22,10 +24,19 @@ def _client():
 
 
 def build_s3_key(project_id: uuid.UUID, document_id: uuid.UUID, file_name: str) -> str:
-    """Namespace every object under its project and document id, so deleting
-    a project's documents (or computing its total size, for the Lambda size
-    limit) is a simple prefix operation."""
+    """Namespace every object under its project and document id."""
     return f"projects/{project_id}/documents/{document_id}/{file_name}"
+
+
+def project_storage_size(project_id: uuid.UUID) -> int:
+    """Return the total number of bytes currently stored for a project."""
+    prefix = f"projects/{project_id}/"
+    total = 0
+    paginator = _client().get_paginator("list_objects_v2")
+    for page in paginator.paginate(Bucket=settings.S3_BUCKET_NAME, Prefix=prefix):
+        for obj in page.get("Contents", []):
+            total += int(obj.get("Size", 0))
+    return total
 
 
 def upload_file(s3_key: str, fileobj: BinaryIO, content_type: str) -> None:
@@ -49,6 +60,5 @@ def download_file(s3_key: str) -> tuple[bytes, str]:
 
 
 def delete_file(s3_key: str) -> None:
-    """Deleting a nonexistent key is a no-op in S3 (no error raised), which
-    is the behavior we want here too."""
+    """Deleting a nonexistent key is a no-op in S3."""
     _client().delete_object(Bucket=settings.S3_BUCKET_NAME, Key=s3_key)

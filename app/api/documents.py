@@ -3,6 +3,7 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_document_access_or_403, get_project_access_or_403
+from app.core.config import settings
 from app.db.session import get_db
 from app.models.document import Document
 from app.models.project import ProjectAccess
@@ -25,6 +26,24 @@ def _validate_content_type(content_type: str) -> None:
         )
 
 
+def _file_size(file: UploadFile) -> int:
+    """Measure an upload without loading the whole file into memory."""
+    file.file.seek(0, 2)
+    size = file.file.tell()
+    file.file.seek(0)
+    return size
+
+
+def _check_storage_limit(project_id, incoming_bytes: int, replacing_bytes: int = 0) -> None:
+    current_bytes = storage.project_storage_size(project_id)
+    projected_bytes = current_bytes - replacing_bytes + incoming_bytes
+    if projected_bytes > settings.MAX_PROJECT_STORAGE_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="Project storage limit exceeded",
+        )
+
+
 @router.get("/project/{project_id}/documents", response_model=list[DocumentRead])
 def list_project_documents(
     access: ProjectAccess = Depends(get_project_access_or_403),
@@ -43,35 +62,46 @@ def upload_project_documents(
     access: ProjectAccess = Depends(get_project_access_or_403),
     db: Session = Depends(get_db),
 ) -> list[Document]:
-    for f in files:
-        _validate_content_type(f.content_type or "")
+    sizes: list[int] = []
+    for file in files:
+        _validate_content_type(file.content_type or "")
+        sizes.append(_file_size(file))
+
+    _check_storage_limit(access.project_id, sum(sizes))
 
     created: list[Document] = []
-    for f in files:
-        document = Document(
-            project_id=access.project_id,
-            uploaded_by_id=access.user_id,
-            file_name=f.filename or "unnamed",
-            content_type=f.content_type or "application/octet-stream",
-            size_bytes=0,
-            s3_key="",
-        )
-        db.add(document)
-        db.flush()
+    uploaded_keys: list[str] = []
+    try:
+        for file, size_bytes in zip(files, sizes):
+            document = Document(
+                project_id=access.project_id,
+                uploaded_by_id=access.user_id,
+                file_name=file.filename or "unnamed",
+                content_type=file.content_type or "application/octet-stream",
+                size_bytes=size_bytes,
+                s3_key="",
+            )
+            db.add(document)
+            db.flush()
 
-        s3_key = storage.build_s3_key(access.project_id, document.id, document.file_name)
-        contents = f.file.read()
-        f.file.seek(0)
-        storage.upload_file(s3_key, f.file, content_type=document.content_type)
+            s3_key = storage.build_s3_key(access.project_id, document.id, document.file_name)
+            storage.upload_file(s3_key, file.file, content_type=document.content_type)
+            uploaded_keys.append(s3_key)
+            document.s3_key = s3_key
+            created.append(document)
 
-        document.s3_key = s3_key
-        document.size_bytes = len(contents)
-        created.append(document)
+        db.commit()
+    except Exception:
+        db.rollback()
+        for key in uploaded_keys:
+            try:
+                storage.delete_file(key)
+            except Exception:
+                pass
+        raise
 
-    db.commit()
-    for d in created:
-        db.refresh(d)
-
+    for document in created:
+        db.refresh(document)
     return created
 
 
@@ -98,18 +128,32 @@ def update_document(
     db: Session = Depends(get_db),
 ) -> Document:
     _validate_content_type(file.content_type or "")
+    new_size = _file_size(file)
+    _check_storage_limit(document.project_id, new_size, replacing_bytes=document.size_bytes)
 
-    contents = file.file.read()
-    file.file.seek(0)
-    storage.upload_file(document.s3_key, file.file, content_type=file.content_type or "")
+    old_key = document.s3_key
+    new_name = file.filename or document.file_name
+    new_key = storage.build_s3_key(document.project_id, document.id, new_name)
 
-    document.file_name = file.filename or document.file_name
+    storage.upload_file(new_key, file.file, content_type=file.content_type or document.content_type)
+
+    document.file_name = new_name
     document.content_type = file.content_type or document.content_type
-    document.size_bytes = len(contents)
+    document.size_bytes = new_size
+    document.s3_key = new_key
 
-    db.add(document)
-    db.commit()
-    db.refresh(document)
+    try:
+        db.add(document)
+        db.commit()
+        db.refresh(document)
+    except Exception:
+        db.rollback()
+        if new_key != old_key:
+            storage.delete_file(new_key)
+        raise
+
+    if new_key != old_key:
+        storage.delete_file(old_key)
 
     return document
 

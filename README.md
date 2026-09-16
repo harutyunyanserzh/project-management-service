@@ -6,11 +6,12 @@ A FastAPI backend for creating, updating, sharing, and deleting projects and the
 
 - Python 3.10 + FastAPI
 - PostgreSQL + SQLAlchemy ORM + Alembic migrations
+- uv for Python dependency and environment management
 - Docker / Docker Compose
 - S3-compatible document storage through boto3
 - JWT authentication + bcrypt password hashing
 - pytest with SQLite and mocked S3 for automated tests
-- GitHub Actions for linting, tests, and Docker build verification
+- GitHub Actions for linting, unit tests, and Docker build verification
 
 Real AWS deployment is not required to run or test this project. The S3 and Lambda code remains in the repository as part of the requested architecture and can be demonstrated locally/mocked.
 
@@ -32,6 +33,24 @@ The creator automatically receives an OWNER `ProjectAccess` row when a project i
 - `project_access` — connects users to projects and stores their role
 - `documents` — document metadata and storage key
 - `share_tokens` — hashed, expiring, single-use invitation tokens
+
+## Dependency management with uv
+
+This project uses **uv** instead of pip/Poetry for dependency and virtual-environment management. Dependencies are declared in `pyproject.toml`.
+
+Install uv by following the official uv documentation, then from the repository root run:
+
+```bash
+uv sync
+```
+
+Run application commands through uv, for example:
+
+```bash
+uv run pytest tests/ -v
+uv run ruff check .
+uv run black --check .
+```
 
 ## Running locally with Docker
 
@@ -56,8 +75,8 @@ Do **not** generate another initial migration during normal setup; the repositor
 ## Running tests
 
 ```bash
-poetry install --with dev
-poetry run pytest tests/ -v
+uv sync
+uv run pytest tests/ -v
 ```
 
 Tests use an isolated in-memory SQLite database and mocked S3 through `moto`, so real PostgreSQL/AWS credentials are not needed for the test suite.
@@ -99,14 +118,41 @@ When SMTP is not configured, the development email service logs the invitation i
 
 ## CI
 
-`.github/workflows/ci.yml` runs for changes to `main`:
+`.github/workflows/ci.yml` runs on **every branch push**, including feature branches, and on pull requests to `main`.
+
+The pipeline performs:
 
 1. Ruff lint check
 2. Black formatting check
-3. Full pytest suite
+3. Unit tests with pytest
 4. Docker image build verification
 
 There is intentionally no cloud deployment step because deployment to AWS or another cloud provider is outside the current project scope.
+
+## Commit convention
+
+This repository uses **Conventional Commits**. New commits should follow the form:
+
+```text
+<type>: <short description>
+```
+
+Common examples:
+
+```text
+feat: add project sharing endpoint
+fix: reject files above project storage limit
+test: add document upload unit tests
+docs: update setup instructions
+ci: run tests on feature branches
+build: migrate dependency management to uv
+```
+
+Typical types are `feat`, `fix`, `test`, `docs`, `ci`, `build`, `refactor`, and `chore`.
+
+## License
+
+This project is released under the MIT License. See the `LICENSE` file.
 
 ## Project status
 
@@ -119,6 +165,9 @@ There is intentionally no cloud deployment step because deployment to AWS or ano
 - [x] Project storage-limit checks
 - [x] PostgreSQL models and Alembic migration
 - [x] Docker / Docker Compose setup
+- [x] uv dependency management
 - [x] Automated tests with mocked external storage
-- [x] GitHub Actions lint/test/Docker verification
+- [x] CI unit tests on every feature-branch push
+- [x] Conventional Commits documented
+- [x] MIT open-source license
 - [x] Lambda examples retained for the required architecture

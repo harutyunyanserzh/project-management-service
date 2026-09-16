@@ -2,9 +2,7 @@ FROM python:3.10-slim AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    POETRY_VERSION=1.8.2 \
-    POETRY_NO_INTERACTION=1 \
-    POETRY_VIRTUALENVS_CREATE=false
+    UV_NO_DEV=1
 
 WORKDIR /code
 
@@ -12,10 +10,12 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends gcc libpq-dev curl \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install "poetry==${POETRY_VERSION}"
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-COPY pyproject.toml poetry.lock* /code/
-RUN poetry install --no-root --only main
+COPY pyproject.toml /code/
+RUN uv sync --no-dev --no-install-project
+
+ENV PATH="/code/.venv/bin:$PATH"
 
 COPY ./app /code/app
 COPY ./alembic.ini /code/alembic.ini

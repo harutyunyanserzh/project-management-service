@@ -1,6 +1,6 @@
 from fastapi import Depends, FastAPI
 
-from app.api import auth, documents, projects
+from app.api import auth, documents, projects, sharing
 from app.api.deps import get_current_user
 from app.core.config import settings
 from app.models.user import User
@@ -11,6 +11,7 @@ app = FastAPI(title=settings.APP_NAME)
 app.include_router(auth.router)
 app.include_router(projects.router)
 app.include_router(documents.router)
+app.include_router(sharing.router)
 
 
 @app.get("/health", tags=["health"])

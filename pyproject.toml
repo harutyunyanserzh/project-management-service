@@ -1,7 +1,7 @@
 [project]
 name = "project-management-service"
 version = "0.1.0"
-description = "Project management/profiles dashboard service"
+description = "Project management service with an AI document assistant (RAG + LangGraph agent)"
 readme = "README.md"
 requires-python = ">=3.10,<4.0"
 dependencies = [
@@ -18,6 +18,24 @@ dependencies = [
     "python-multipart>=0.0.9,<0.1.0",
     "boto3>=1.34.74,<2.0.0",
     "email-validator>=2.1.1,<3.0.0",
+    # AI assistant
+    "pgvector>=0.3.0,<1.0.0",
+    "pypdf>=4.0.0,<7.0.0",
+    "python-docx>=1.1.0,<2.0.0",
+    "langchain-core>=0.3.0,<2.0.0",
+    "langchain-text-splitters>=0.3.0,<2.0.0",
+    "langgraph>=0.2.60,<2.0.0",
+    "langchain-ollama>=0.2.0,<2.0.0",
+    "langchain-anthropic>=0.3.0,<2.0.0",
+    "langchain-openai>=0.2.0,<2.0.0",
+]
+
+[project.optional-dependencies]
+# Local Hugging Face embeddings (pulls in PyTorch, so it is opt-in):
+#   uv sync --extra huggingface   and set EMBEDDING_PROVIDER=huggingface
+huggingface = [
+    "langchain-huggingface>=0.1.0,<2.0.0",
+    "sentence-transformers>=3.0.0,<6.0.0",
 ]
 
 [dependency-groups]

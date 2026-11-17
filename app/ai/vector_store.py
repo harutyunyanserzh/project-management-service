@@ -83,11 +83,9 @@ def search(
     if not results:
         return []
 
-    file_names = dict(
-        db.query(Document.id, Document.file_name)
-        .filter(Document.id.in_(list({chunk.document_id for chunk, _ in results})))
-        .all()
-    )
+    document_ids = list({chunk.document_id for chunk, _ in results})
+    names = db.query(Document.id, Document.file_name).filter(Document.id.in_(document_ids)).all()
+    file_names = dict(names)
     return [
         ScoredChunk(chunk=chunk, file_name=file_names.get(chunk.document_id, "unknown"), score=s)
         for chunk, s in results
@@ -114,7 +112,8 @@ def _search_pgvector(db, project_id, query_vector, model_name, k, document_id):
         return []
 
     ids = [uuid.UUID(str(row.id)) for row in rows]
-    by_id = {chunk.id: chunk for chunk in db.query(DocumentChunk).filter(DocumentChunk.id.in_(ids))}
+    chunks = db.query(DocumentChunk).filter(DocumentChunk.id.in_(ids)).all()
+    by_id = {chunk.id: chunk for chunk in chunks}
     return [(by_id[i], float(row.score)) for i, row in zip(ids, rows) if i in by_id]
 
 

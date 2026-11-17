@@ -1,7 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, status
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
+from app.ai import vector_store
+from app.ai.indexing import index_document_in_background
 from app.api.deps import get_document_access_or_403, get_project_access_or_403
 from app.core.config import settings
 from app.db.session import get_db
@@ -59,6 +61,7 @@ def list_project_documents(
 )
 def upload_project_documents(
     files: list[UploadFile],
+    background_tasks: BackgroundTasks,
     access: ProjectAccess = Depends(get_project_access_or_403),
     db: Session = Depends(get_db),
 ) -> list[Document]:
@@ -102,6 +105,8 @@ def upload_project_documents(
 
     for document in created:
         db.refresh(document)
+        # Index for the AI assistant after the response is sent, so uploads stay fast
+        background_tasks.add_task(index_document_in_background, document.id)
     return created
 
 
@@ -124,6 +129,7 @@ def download_document(document: Document = Depends(get_document_access_or_403)) 
 @router.put("/document/{document_id}", response_model=DocumentRead)
 def update_document(
     file: UploadFile,
+    background_tasks: BackgroundTasks,
     document: Document = Depends(get_document_access_or_403),
     db: Session = Depends(get_db),
 ) -> Document:
@@ -155,6 +161,8 @@ def update_document(
     if new_key != old_key:
         storage.delete_file(old_key)
 
+    # The content changed, so the old chunks are stale: rebuild them
+    background_tasks.add_task(index_document_in_background, document.id)
     return document
 
 
@@ -164,5 +172,6 @@ def delete_document(
     db: Session = Depends(get_db),
 ) -> None:
     storage.delete_file(document.s3_key)
+    vector_store.delete_document_chunks(db, document.id)
     db.delete(document)
     db.commit()

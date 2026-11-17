@@ -1,0 +1,33 @@
+{
+  "documents": [
+    {
+      "name": "vendor_contract.docx",
+      "text": "Vendor contract between Acme Studio (the vendor) and Northwind Ltd (the client).\n\nScope. The vendor designs and builds a mobile booking app for iOS and Android, including an admin dashboard.\n\nTimeline. The beta version is due on January 15, 2027. The public launch deadline is March 3, 2027. If delivery is late, the vendor pays a penalty of 2 percent of the contract value for each week of delay, capped at 10 percent.\n\nPayment. The total contract value is 50,000 USD. The client pays 50 percent upfront and 50 percent after final acceptance. Invoices are due within 30 days.\n\nIntellectual property. All source code and designs become the property of the client after the final payment.\n\nTermination. Either party may end the contract with 30 days of written notice. Work completed before termination is paid pro rata."
+    },
+    {
+      "name": "requirements.pdf",
+      "text": "Product requirements.\n\nUsers can browse yoga and pilates classes, filter them by studio, time and instructor, and book a place in one tap. Users receive a push notification one hour before a booked class.\n\nPayments are made by card through Stripe. Refunds are automatic if the user cancels at least 12 hours before the class.\n\nStudios manage their schedule, instructors and capacity in the admin dashboard. Each class has a maximum capacity; when it is full, users can join a waiting list.\n\nThe app must support English and Armenian. Accessibility must meet WCAG 2.1 AA."
+    },
+    {
+      "name": "meeting_notes.docx",
+      "text": "Kickoff meeting notes, 10 November 2026, held in Yerevan.\n\nAttendees: Anna (product owner), David (tech lead), Mariam (designer), Serzh (backend developer).\n\nDecisions. The backend uses FastAPI and PostgreSQL. The team works in two-week sprints with a demo every second Friday. Design mockups are due by 1 December 2026.\n\nRisks. The Stripe integration needs approval from the client's finance team. The Armenian translation will be provided by the client by mid-January.\n\nNext steps. David sets up the CI pipeline. Mariam shares the first wireframes next week."
+    }
+  ],
+  "questions": [
+    {"question": "When is the public launch deadline?", "expected_document": "vendor_contract.docx", "expected_phrase": "March 3, 2027"},
+    {"question": "What is the penalty for late delivery?", "expected_document": "vendor_contract.docx", "expected_phrase": "2 percent"},
+    {"question": "How much is the contract worth in total?", "expected_document": "vendor_contract.docx", "expected_phrase": "50,000 USD"},
+    {"question": "Who owns the source code?", "expected_document": "vendor_contract.docx", "expected_phrase": "property of the client"},
+    {"question": "How much notice is needed to terminate the agreement?", "expected_document": "vendor_contract.docx", "expected_phrase": "30 days of written notice"},
+    {"question": "When do users get a reminder before class?", "expected_document": "requirements.pdf", "expected_phrase": "one hour before"},
+    {"question": "What is the refund policy for cancellations?", "expected_document": "requirements.pdf", "expected_phrase": "12 hours"},
+    {"question": "What happens when a class is fully booked?", "expected_document": "requirements.pdf", "expected_phrase": "waiting list"},
+    {"question": "Which languages must the app support?", "expected_document": "requirements.pdf", "expected_phrase": "Armenian"},
+    {"question": "Which accessibility standard applies?", "expected_document": "requirements.pdf", "expected_phrase": "WCAG"},
+    {"question": "Who is the tech lead on the team?", "expected_document": "meeting_notes.docx", "expected_phrase": "David (tech lead)"},
+    {"question": "What backend framework did the team choose?", "expected_document": "meeting_notes.docx", "expected_phrase": "FastAPI"},
+    {"question": "How long are the sprints?", "expected_document": "meeting_notes.docx", "expected_phrase": "two-week sprints"},
+    {"question": "When are the design mockups due?", "expected_document": "meeting_notes.docx", "expected_phrase": "1 December 2026"},
+    {"question": "What are the risks around payments integration?", "expected_document": "meeting_notes.docx", "expected_phrase": "finance team"}
+  ]
+}

@@ -11,6 +11,16 @@ from app.db.session import Base
 from app.main import app
 
 
+@pytest.fixture(autouse=True)
+def offline_ai(monkeypatch):
+    """Tests never call a real model: keyword-hash embeddings and no LLM by default.
+    Individual tests plug in fake chat models through app.dependency_overrides."""
+    monkeypatch.setattr(settings, "EMBEDDING_PROVIDER", "hash")
+    monkeypatch.setattr(settings, "LLM_PROVIDER", "none")
+    yield
+    app.dependency_overrides.clear()
+
+
 @pytest.fixture()
 def db_engine():
     """A fresh in-memory SQLite DB per test, wired into the app's session module
@@ -30,7 +40,16 @@ def db_engine():
     db_session_module.SessionLocal = TestingSessionLocal
 
     # import models so their tables are registered on Base.metadata
-    from app.models import Document, Project, ProjectAccess, ShareToken, User  # noqa: F401
+    from app.models import (  # noqa: F401
+        AIRequestLog,
+        ChatMessage,
+        Document,
+        DocumentChunk,
+        Project,
+        ProjectAccess,
+        ShareToken,
+        User,
+    )
 
     Base.metadata.create_all(bind=engine)
     yield engine

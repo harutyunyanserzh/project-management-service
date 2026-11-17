@@ -95,19 +95,19 @@ def search(
 def _search_pgvector(db, project_id, query_vector, model_name, k, document_id):
     vector_literal = "[" + ",".join(f"{x:.8g}" for x in query_vector) + "]"
     document_filter = "AND document_id = :document_id" if document_id else ""
-    sql = text(f"""
+    query_sql = f"""
         SELECT id, 1 - (embedding <=> CAST(:query AS vector)) AS score
         FROM document_chunks
         WHERE project_id = :project_id AND embedding_model = :model {document_filter}
         ORDER BY embedding <=> CAST(:query AS vector)
         LIMIT :k
-        """)
+    """
     # Raw SQL bypasses SQLAlchemy's UUID type, and psycopg2 cannot send uuid.UUID
     # objects directly, so ids are passed as strings (Postgres casts them to uuid)
     params = {"query": vector_literal, "project_id": str(project_id), "model": model_name, "k": k}
     if document_id:
         params["document_id"] = str(document_id)
-    rows = db.execute(sql, params).all()
+    rows = db.execute(text(query_sql), params).all()
     if not rows:
         return []
 
